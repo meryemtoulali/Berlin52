@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "berlin.h"
-
+#include <math.h>
 
 
 int main(){
@@ -41,9 +41,16 @@ int main(){
     initMarque(marque, nbrPoints);
 
     //escaladeSimple(matriceCout, marque, nbrPoints);
-    escaladeComplete(matriceCout, marque, nbrPoints);
+    //escaladeComplete(matriceCout, marque, nbrPoints);
+    recuitSimule(matriceCout, marque, nbrPoints);
 
+    // float Tdepart = 1500;
+    // float T = Tdepart;
+    // float p = 0, A = 0;
+    // float dE = 1042.30;
 
+    // p = exp(-dE / T);
+    // printf("%.2f - ", p);
 
 
 }

@@ -12,4 +12,6 @@ void      escaladeSimple     (float* matriceCout, int* marque, int n);
 
 void      escaladeComplete   (float* matriceCout, int* marque, int n);
 
+void      recuitSimule       (float* matriceCout, int* marque, int n);
+
 

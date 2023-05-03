@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include <math.h>
 #include "berlin.h"
+#include <time.h>
+
 
 float distance(Point p1, Point p2){
     float dist = 0;
@@ -14,7 +16,6 @@ void initMarque(int* marque, int n){
         marque[i] = false;
     }
 }
-
 
 static void copierTab(int* src, int* dest, int debut, int fin){
     // fin inclu
@@ -43,7 +44,7 @@ static void afficherTab(int* tab, int n){
 static int* opt(int* tour, int* newTour, int i, int k, int n){
     // 0 ... i-1 keep
     copierTab(tour, newTour, 0, i-1);
-    // i ... k invert
+    // i ... k revert
     copierTabInverse(tour, newTour, i, k);
     // k+1 ... n keep
     copierTab(tour, newTour, k+1, n);
@@ -92,7 +93,6 @@ static float coutTour(float* matriceCout, int n, int* tour){
     //printf("\n");
     return cout;
 }
-
 
 static int* voisinSimple(float* matriceCout, int n, int* tourCourant){
     int* tourVoisin = (int*) malloc((n + 1) * sizeof(int));
@@ -210,7 +210,6 @@ void escaladeComplete(float* matriceCout, int* marque, int n){
     float coutMin = coutTour(matriceCout, n, tourCourant);
     printf("Cout du premier tour : %.2f\n", coutTour(matriceCout, n, tourCourant));
     // les voisins de premier tour seulement
-    // to do : after exhausting neighbors of premierTour, move on to neighbors of tourCourant
     while(maxIterations >= 0){
         // à limiter en temps ou en itérations
         printf("while : tourCourant est ");
@@ -224,6 +223,92 @@ void escaladeComplete(float* matriceCout, int* marque, int n){
         maxIterations--;
     }
     printf("Exhausted all neighbors/max iterations. Tour courant : ");
+    afficherTab(tourCourant, n);
+    printf("Cout : %.2f\n", coutTour(matriceCout, n, tourCourant));
+
+}
+
+static int alea(int lower, int upper){
+    return (rand() % (upper-lower+1) + lower);
+}
+
+
+void recuitSimule(float* matriceCout, int* marque, int n){
+    // solution 1 par le plus proche voisin
+    int* premierTour = (int*) malloc((n + 1) * sizeof(int));
+    int* nextTour = (int*) malloc((n + 1) * sizeof(int));
+    int* tourCandidat = (int*) malloc((n + 1) * sizeof(int));
+
+    int* tourCourant = (int*) malloc((n + 1) * sizeof(int));
+
+
+    int essais = pow(n/2, 2);
+    //float Tdepart = 1650;
+    float Tdepart = 3000;
+    float T = Tdepart;
+    float Tarret = 5;
+    float coutCourant = 0;
+    int i = 0, k = 0;
+    float dE = 0;
+    float alpha = 0.98, p = 0, A = 0;
+
+
+
+    // construire un premier chemin par le plus proche voisin
+    premierTour = plusProcheVoisin(matriceCout, marque, n);
+
+    printf("Le premier tour : ");
+    afficherTab(premierTour, n);
+    printf("Cout du premier tour : %.2f\n", coutTour(matriceCout, n, premierTour));
+
+    // Escalade par 2-opt
+    tourCourant = premierTour;
+    srand(time(0));
+
+    while(T > Tarret){
+        for(int essai = 0; essai < essais; essai++){
+            coutCourant = coutTour(matriceCout, n, tourCourant);
+            i = alea(1,n-2);
+            k = alea(i+1, n-1);
+
+            opt(tourCourant, tourCandidat, i, k, n);
+            dE = coutTour(matriceCout, n, tourCandidat) - coutTour(matriceCout, n, tourCourant);
+
+            //printf("Tour courant : ");
+            //afficherTab(tourCourant, n);
+            //printf("Cout courant : %.2f\n", coutTour(matriceCout, n, tourCourant));
+
+            //printf("Tour candidat : ");
+            //afficherTab(tourCandidat, n);
+            //printf("Cout candidat : %.2f\n", coutTour(matriceCout, n, tourCandidat));
+            //printf("%.2f  |  ", dE);
+
+            if(dE < 0){
+                // found better circuit
+                copierTab(tourCandidat, tourCourant, 0, n);
+                //printf("bon candidat choisit | ");
+            }
+            else {
+                A = (float)rand()/RAND_MAX;
+                p = exp(-dE / T);
+                //printf("A = %.2f,   p = %.2f\n", A, p);
+                if (A <= p){
+                    // accept worse circuit
+                    //printf("mauvais candidat choisit | ");
+                    copierTab(tourCandidat, tourCourant, 0, n);
+                } //else printf("aucun choisi | ");
+            }
+
+        }
+
+        // printf("\n\nResultat du palier : T = %.2f\n", T);
+        // printf("Tour courant : ");
+        // afficherTab(tourCourant, n);
+        // printf("Cout : %.2f\n", coutTour(matriceCout, n, tourCourant));
+        T = alpha * T;
+    }
+
+    printf("\n\nResultat du recuit simule : ");
     afficherTab(tourCourant, n);
     printf("Cout : %.2f\n", coutTour(matriceCout, n, tourCourant));
 
