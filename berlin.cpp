@@ -370,10 +370,10 @@ int selection(Chromosome *population, float* selection_prob, int pop_size){
             break;
         }
     }
-    return -1;
+    return alea(0, pop_size);
 }
 
-void reproduire(Chromosome enfant, Chromosome parent1, Chromosome parent2, int n, float pc){
+void reproduire(Chromosome enfant, Chromosome parent1, Chromosome parent2, int n, float pc, int* compt_croisement){
     // croiser selon le taux de croisement
     float r = (float)rand()/RAND_MAX;
     if(r > pc){
@@ -385,9 +385,10 @@ void reproduire(Chromosome enfant, Chromosome parent1, Chromosome parent2, int n
             copierTab(parent2.tour, enfant.tour, 0, n);
         }
     } else {
+        *compt_croisement += 1;
         // croisement par Order Crossover (OX) operator
         // pick random positions p1 and p2
-        int p1 = alea(0, n-1);
+        int p1 = alea(0, n-2);
         int p2 = alea(p1+1, n-1);
 
         int* segment = (int*)malloc((p2-p1+1)*sizeof(int));
@@ -445,14 +446,15 @@ void mutation(Chromosome enfant, int n){
 
 void algorithmeGenetique(float* matriceCout, int* marque, int n){
 
-    int gen_count = 0, max_gen_count = 2;
-
-    int pop_size = 10; //taille population
+    int gen_count = 0, max_gen_count = 100;
+    int pop_size = 10000; //taille population
 
     float pc = 0.6; //taux de croisement
-    //float pm = 1.75 / (pop_size * sqrt(n+1)); // taux de mutation
-    float pm = 0.9;
+    float pm = 1.75 / (pop_size * sqrt(n+1)); // taux de mutation
+    if(pm < 0.002) pm = 0.002;
     srand(time(0));
+    float cout_moyen, meilleur_cout;
+    int compt_croisement, compt_mutation, meilleur_indice;
 
 
 
@@ -481,20 +483,33 @@ void algorithmeGenetique(float* matriceCout, int* marque, int n){
     //     afficherCh(population[i], n);
     // }
 
-    printf("Couts de la population initiale :\n");
-    for(int i=0; i<pop_size; i++){
-        printf("%.2f  |  ", population[i].cout);
-    }
+    while(gen_count <= max_gen_count){
 
+        next_population = (Chromosome*) malloc(pop_size * sizeof(Chromosome));
+        for (int i = 0; i < pop_size; i++) {
+            next_population[i].tour = (int*) malloc((n + 1) * sizeof(int));
+        }
 
-    while(gen_count < max_gen_count){
+        cout_moyen = 0;
+        meilleur_cout = INT_MAX;
+        compt_croisement = 0;
+        compt_mutation = 0;
+        meilleur_indice = -1;
+
         // ETAPE 2 - SELECTION
 
         // Calculate the total fitness of the population
+        // (generation stats at the same time)
         float total_fitness = 0.0;
         for (int i = 0; i < pop_size; i++) {
             total_fitness += 1.0 / population[i].cout;  // assume lower cost is better fitness
+            cout_moyen += population[i].cout;
+            if(population[i].cout < meilleur_cout){
+                meilleur_cout = population[i].cout;
+                meilleur_indice = i;
+            }
         }
+        cout_moyen = cout_moyen/pop_size;
 
         // Calculate the selection probability for each individual
         for (int i = 0; i < pop_size; i++) {
@@ -511,7 +526,7 @@ void algorithmeGenetique(float* matriceCout, int* marque, int n){
             //afficherCh(population[y], n);
 
             // ETAPE 3 - CROISEMENT
-            reproduire(next_population[i], population[x], population[y], n, pc);
+            reproduire(next_population[i], population[x], population[y], n, pc, &compt_croisement);
             next_population[i].cout = coutTour(matriceCout, n, next_population[i].tour);
             //printf("Fils du croisement : ");
             //afficherCh(next_population[i], n);
@@ -520,36 +535,42 @@ void algorithmeGenetique(float* matriceCout, int* marque, int n){
             float r = (float)rand()/RAND_MAX;
             if(r < pm){
                 mutation(next_population[i], n);
+                compt_mutation += 1;
             }
         }   
 
-        printf("Couts de la population nouvelle :\n");
-        for(int i=0; i<pop_size; i++){
-            printf("%.2f  |  ", next_population[i].cout);
-        }
+        printf("\n*********** GENERATION %d - STATS ***********\n", gen_count);
+        printf("Moyenne des coûts : %.2f\n", cout_moyen);
+        printf("Meilleur coût : %.2f\n", meilleur_cout);
+        printf("Nombre de croisements : %d/%d\n", compt_croisement, pop_size);
+        printf("Nombre de mutations : %d/%d\n", compt_mutation, pop_size);
 
-        // ETAPE 5 - REMPLACEMENT
-            // l'étape du croisement comporte la stratégie de remplacement
-            // s'il y a croisement, l'enfant remplace les parents
-            // s'il n'y a pas de croisement, le meilleur parent est conservé
-            // ce processus est répété pop_size fois
-            population = next_population;
+        if(meilleur_cout < 7500){
+            printf("\n\nCritère de fin atteint.\n");
+            printf("Le meilleur circuit trouvé est :");
+            afficherCh(population[meilleur_indice], n);
 
-        if(true){
+            break;
             //end of program
             // si on trouve un enfant suffisemment adéquat
         }
+        if(gen_count == max_gen_count){
+            printf("\n\nMax de générations atteint.\n");
+            printf("Le meilleur circuit trouvé est :");
+            afficherCh(population[meilleur_indice], n);
+        }
+
+        // ETAPE 5 - REMPLACEMENT
+        // l'étape du croisement comporte la stratégie de remplacement
+        // s'il y a croisement, l'enfant remplace les parents
+        // s'il n'y a pas de croisement, le meilleur parent est conservé
+        // ce processus est répété pop_size fois
+        population = next_population;
 
         gen_count ++;
 
     }
     
 
-
-    //to add
-    // generation statistic s:
-        // mean cost and best cost
-        // mutation counter
-        // crossover counter
 }
 
