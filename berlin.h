@@ -14,4 +14,4 @@ void      escaladeComplete   (float* matriceCout, int* marque, int n);
 
 void      recuitSimule       (float* matriceCout, int* marque, int n);
 
-
+void      algorithmeGenetique(float* matriceCout, int* marque, int n);
