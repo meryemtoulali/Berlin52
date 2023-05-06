@@ -330,6 +330,14 @@ void afficherCh(Chromosome ch, int n){
     printf("Cout : %.2f\n", ch.cout);
 }
 
+int trouver(int x, int* tab, int n){
+    for(int i=0; i<n; i++){
+        if (tab[i] == x) return true;
+    }
+    return false;
+
+}
+
 void populationInit(Chromosome *population, int pop_size, float* matriceCout, int* marque, int n){
     //int* tour = (int*) malloc((n + 1) * sizeof(int));
     int start = 0;
@@ -352,7 +360,8 @@ int selection(Chromosome *population, float* selection_prob, int pop_size){
     // }
     // return -1;
 
-    float r = (float) rand() / (float) RAND_MAX;  // generate a random number between 0 and 1
+    // generate a random number between 0 and 1
+    float r = (float) rand() / (float) RAND_MAX;  
     float sum_prob = 0.0;
     for (int i = 0; i < pop_size; i++) {
         sum_prob += selection_prob[i];
@@ -364,46 +373,89 @@ int selection(Chromosome *population, float* selection_prob, int pop_size){
     return -1;
 }
 
-void reproduire(Chromosome enfant, Chromosome parent1, Chromosome parent2, int n){
-    int c = alea(0, n-1);
-    for(int i=0; i<c; i++){
-        enfant.tour[i] = parent1.tour[i];
-    }
-    for(int i=c; i<n; i++){
-        enfant.tour[i] = parent2.tour[i];
-    }
-    enfant.tour[n] = enfant.tour[0];
+void reproduire(Chromosome enfant, Chromosome parent1, Chromosome parent2, int n, float pc){
+    // croiser selon le taux de croisement
+    float r = (float)rand()/RAND_MAX;
+    if(r > pc){
+        // pas de croisement
+        // enfant = meilleur parent
+        if(parent1.cout < parent2.cout){
+            copierTab(parent1.tour, enfant.tour, 0, n);
+        } else{
+            copierTab(parent2.tour, enfant.tour, 0, n);
+        }
+    } else {
+        // croisement par Order Crossover (OX) operator
+        // pick random positions p1 and p2
+        int p1 = alea(0, n-1);
+        int p2 = alea(p1+1, n-1);
 
-    /* HERES HOW IT GOES
-    Order Crossover (OX) operator
-    pick random positions p1 and p2
-    segment = parent[p1..p2]
-    child[p1..p2] = segment
-    for i=0, j=0 i<n; i++; 
-        if(parent2[i] not in segment)
-            remaining[j] = parent2[i]
-            j++
-    end
-    fill remaining  spots in child
-    for i=0, j=0; i<n; i++
-        if(i = p1)
-            i = p2
-            continue
-        
-        child[i] = remaining[j]
-        j++
-    end
+        int* segment = (int*)malloc((p2-p1+1)*sizeof(int));
+        int* remaining = (int*)malloc((n-(p2-p1+1))*sizeof(int));
 
-    
-    
-    */
+        // segment = parent[p1..p2]
+        copierTab(&parent1.tour[p1], segment,0, p2-p1);
+        // printf("size of segment : %d\n", p2-p1+1);
+        // printf("segment[0] : %d\n", segment[0]);
+        // printf("segment[1] : %d\n", segment[1]);
+        // printf("segment[2] : %d\n", segment[2]);
+        // printf("segment[3] : %d\n", segment[3]);
+        // printf("segment[4] : %d\n", segment[4]);
+        //printf("segment de parent 1 :\n");
+        //afficherTab(segment, p2-p1);
+
+        // child[p1..p2] = segment from parent 1
+        copierTab(segment, &enfant.tour[p1], 0, p2-p1);
+        //printf("enfant contient segment de parent 1 :\n");
+        //afficherTab(&enfant.tour[p1], p2-p1);
+
+        // fill remaining points from parent 2 and skip dupplicates
+        for(int i=0, j=0; i<n; i++){
+            if(!trouver(parent2.tour[i], segment, p2-p1+1)){
+                remaining[j] = parent2.tour[i];
+                j++;
+            }
+        }
+        //printf("tab des remaining :\n");
+        //afficherTab(remaining, n - (p2-p1+1) -1);
+
+
+        // fill remaining  spots in child
+        // skip [p1..p2] because they've already been filled
+        for(int i =0, j=0; i<n; i++){
+            if(i == p1){
+                i = p2;
+                continue;
+            }
+            enfant.tour[i] = remaining[j];
+            j++;
+        }
+        enfant.tour[n] = enfant.tour[0]; // fermer le circuit
+    }
+}
+
+void mutation(Chromosome enfant, int n){
+    int p1 = alea(1, n-1);
+    int p2 = alea(p1, n-1);
+    int temp = enfant.tour[p2];
+    enfant.tour[p2] = enfant.tour[p1];
+    enfant.tour[p1] = temp;
+
 }
 
 void algorithmeGenetique(float* matriceCout, int* marque, int n){
 
-    srand(time(0));
+    int gen_count = 0, max_gen_count = 2;
 
     int pop_size = 10; //taille population
+
+    float pc = 0.6; //taux de croisement
+    //float pm = 1.75 / (pop_size * sqrt(n+1)); // taux de mutation
+    float pm = 0.9;
+    srand(time(0));
+
+
+
     // int* unTour = (int*) malloc((n + 1) * sizeof(int));
 
     // allouer de la mémoire pour la population
@@ -424,46 +476,80 @@ void algorithmeGenetique(float* matriceCout, int* marque, int n){
     populationInit(population, pop_size, matriceCout, marque, n);
 
     // afficher la population
-    for(int i = 0; i < pop_size; i++){
-        printf("Chromosome :\n");
-        afficherCh(population[i], n);
+    // for(int i = 0; i < pop_size; i++){
+    //     printf("Chromosome :\n");
+    //     afficherCh(population[i], n);
+    // }
+
+    printf("Couts de la population initiale :\n");
+    for(int i=0; i<pop_size; i++){
+        printf("%.2f  |  ", population[i].cout);
     }
 
 
-    // ETAPE 2 - SELECTION
+    while(gen_count < max_gen_count){
+        // ETAPE 2 - SELECTION
 
-    // Calculate the total fitness of the population
-    float total_fitness = 0.0;
-    for (int i = 0; i < pop_size; i++) {
-        total_fitness += 1.0 / population[i].cout;  // assume lower cost is better fitness
+        // Calculate the total fitness of the population
+        float total_fitness = 0.0;
+        for (int i = 0; i < pop_size; i++) {
+            total_fitness += 1.0 / population[i].cout;  // assume lower cost is better fitness
+        }
+
+        // Calculate the selection probability for each individual
+        for (int i = 0; i < pop_size; i++) {
+            selection_prob[i] = (1.0 / population[i].cout) / total_fitness;
+        }
+
+        int x = -1, y = -1;
+        for(int i = 0; i < pop_size; i ++){
+            x = selection(population, selection_prob, pop_size);
+            y = selection(population, selection_prob, pop_size);
+            if(x == -1 || y == -1) printf("Aucun parent sélectionné.\n");
+            //printf("Parents choisis : num %d et %d : \n", x, y);
+            //afficherCh(population[x], n);
+            //afficherCh(population[y], n);
+
+            // ETAPE 3 - CROISEMENT
+            reproduire(next_population[i], population[x], population[y], n, pc);
+            next_population[i].cout = coutTour(matriceCout, n, next_population[i].tour);
+            //printf("Fils du croisement : ");
+            //afficherCh(next_population[i], n);
+
+            // ETAPE 4 - MUTATION
+            float r = (float)rand()/RAND_MAX;
+            if(r < pm){
+                mutation(next_population[i], n);
+            }
+        }   
+
+        printf("Couts de la population nouvelle :\n");
+        for(int i=0; i<pop_size; i++){
+            printf("%.2f  |  ", next_population[i].cout);
+        }
+
+        // ETAPE 5 - REMPLACEMENT
+            // l'étape du croisement comporte la stratégie de remplacement
+            // s'il y a croisement, l'enfant remplace les parents
+            // s'il n'y a pas de croisement, le meilleur parent est conservé
+            // ce processus est répété pop_size fois
+            population = next_population;
+
+        if(true){
+            //end of program
+            // si on trouve un enfant suffisemment adéquat
+        }
+
+        gen_count ++;
+
     }
-
-    // Calculate the selection probability for each individual
-    for (int i = 0; i < pop_size; i++) {
-        selection_prob[i] = (1.0 / population[i].cout) / total_fitness;
-    }
-
-    int x = -1, y = -1;
-    for(int i = 0; i < pop_size; i ++){
-        x = selection(population, selection_prob, pop_size);
-        y = selection(population, selection_prob, pop_size);
-        if(x == -1 || y == -1) printf("Aucun parent sélectionné.\n");
-        printf("Parent choisi num %d et %d : \n", x, y);
-        afficherCh(population[x], n);
-        afficherCh(population[y], n);
-
-        // ETAPE 3 - CROISEMENT
-        // to add taux de croisement 0.6 ~1
-        reproduire(next_population[i], population[x], population[y], n);
-        printf("tour enfant :");
-        next_population[i].cout = coutTour(matriceCout, n, next_population[i].tour);
-        printf("Fils du croisement : ");
-        afficherCh(next_population[i], n);  
-
-    }
-
-    //
     
 
+
+    //to add
+    // generation statistic s:
+        // mean cost and best cost
+        // mutation counter
+        // crossover counter
 }
 
