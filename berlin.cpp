@@ -350,16 +350,6 @@ void populationInit(Chromosome *population, int pop_size, float* matriceCout, in
 }
 
 int selection(Chromosome *population, float* selection_prob, int pop_size){
-    // float P = 0, r = 0;
-    // r = alea(0, S);
-    // for(int i=0; i<pop_size; i++){
-    //     P += population[i].cout;
-    //     if(P > r){
-    //         return i;
-    //     }
-    // }
-    // return -1;
-
     // generate a random number between 0 and 1
     float r = (float) rand() / (float) RAND_MAX;  
     float sum_prob = 0.0;
@@ -396,19 +386,9 @@ void reproduire(Chromosome enfant, Chromosome parent1, Chromosome parent2, int n
 
         // segment = parent[p1..p2]
         copierTab(&parent1.tour[p1], segment,0, p2-p1);
-        // printf("size of segment : %d\n", p2-p1+1);
-        // printf("segment[0] : %d\n", segment[0]);
-        // printf("segment[1] : %d\n", segment[1]);
-        // printf("segment[2] : %d\n", segment[2]);
-        // printf("segment[3] : %d\n", segment[3]);
-        // printf("segment[4] : %d\n", segment[4]);
-        //printf("segment de parent 1 :\n");
-        //afficherTab(segment, p2-p1);
 
         // child[p1..p2] = segment from parent 1
         copierTab(segment, &enfant.tour[p1], 0, p2-p1);
-        //printf("enfant contient segment de parent 1 :\n");
-        //afficherTab(&enfant.tour[p1], p2-p1);
 
         // fill remaining points from parent 2 and skip dupplicates
         for(int i=0, j=0; i<n; i++){
@@ -417,8 +397,6 @@ void reproduire(Chromosome enfant, Chromosome parent1, Chromosome parent2, int n
                 j++;
             }
         }
-        //printf("tab des remaining :\n");
-        //afficherTab(remaining, n - (p2-p1+1) -1);
 
 
         // fill remaining  spots in child
@@ -456,10 +434,6 @@ void algorithmeGenetique(float* matriceCout, int* marque, int n){
     float cout_moyen, meilleur_cout;
     int compt_croisement, compt_mutation, meilleur_indice;
 
-
-
-    // int* unTour = (int*) malloc((n + 1) * sizeof(int));
-
     // allouer de la mémoire pour la population
     Chromosome *population = (Chromosome*) malloc(pop_size * sizeof(Chromosome));
     for (int i = 0; i < pop_size; i++) {
@@ -476,12 +450,6 @@ void algorithmeGenetique(float* matriceCout, int* marque, int n){
     // créer la population initiale par le plus proche voisin,
     // avec des points de départ aléatoires
     populationInit(population, pop_size, matriceCout, marque, n);
-
-    // afficher la population
-    // for(int i = 0; i < pop_size; i++){
-    //     printf("Chromosome :\n");
-    //     afficherCh(population[i], n);
-    // }
 
     while(gen_count <= max_gen_count){
 
@@ -521,15 +489,10 @@ void algorithmeGenetique(float* matriceCout, int* marque, int n){
             x = selection(population, selection_prob, pop_size);
             y = selection(population, selection_prob, pop_size);
             if(x == -1 || y == -1) printf("Aucun parent sélectionné.\n");
-            //printf("Parents choisis : num %d et %d : \n", x, y);
-            //afficherCh(population[x], n);
-            //afficherCh(population[y], n);
 
             // ETAPE 3 - CROISEMENT
             reproduire(next_population[i], population[x], population[y], n, pc, &compt_croisement);
             next_population[i].cout = coutTour(matriceCout, n, next_population[i].tour);
-            //printf("Fils du croisement : ");
-            //afficherCh(next_population[i], n);
 
             // ETAPE 4 - MUTATION
             float r = (float)rand()/RAND_MAX;
@@ -551,7 +514,7 @@ void algorithmeGenetique(float* matriceCout, int* marque, int n){
             afficherCh(population[meilleur_indice], n);
 
             break;
-            //end of program
+            // end of program
             // si on trouve un enfant suffisemment adéquat
         }
         if(gen_count == max_gen_count){
